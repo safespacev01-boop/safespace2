@@ -1,258 +1,241 @@
 import { useState } from "react";
-import {
-  Shield,
-  User,
-  LogOut,
-  School,
-  Search,
-  Lock,
-  KeyRound
-} from "lucide-react";
 
 /* ---------------- TYPES ---------------- */
-type Role = "student" | "admin" | null;
-type View = "search" | "register" | "join" | "role" | "dashboard";
 
-interface SchoolData {
-  id: string;
+type School = {
   name: string;
-  district: string;
-  joinCode: string;       // student code
-  adminCode: string;      // admin code
+  joinCode: string;
+  adminCode: string;
   buildings: string[];
-}
+};
 
-interface AlertLog {
-  time: string;
-  building: string;
-  room: string;
-}
+type Message = {
+  sender: "user" | "admin";
+  text: string;
+};
 
 /* ---------------- APP ---------------- */
-export default function App() {
-  const [view, setView] = useState<View>("search");
-  const [schools, setSchools] = useState<SchoolData[]>([]);
-  const [selectedSchool, setSelectedSchool] = useState<SchoolData | null>(null);
 
-  const [search, setSearch] = useState("");
+export default function App() {
+  const [school, setSchool] = useState<School | null>(null);
+
+  const [schoolName, setSchoolName] = useState("");
+  const [joinCode, setJoinCode] = useState("");
+  const [adminCode, setAdminCode] = useState("");
+  const [buildingsText, setBuildingsText] = useState("");
+
   const [joinInput, setJoinInput] = useState("");
   const [adminInput, setAdminInput] = useState("");
-  const [role, setRole] = useState<Role>(null);
 
-  const [alertActive, setAlertActive] = useState(false);
-  const [history, setHistory] = useState<AlertLog[]>([]);
+  const [isJoined, setIsJoined] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  const [building, setBuilding] = useState("");
-  const [room, setRoom] = useState("");
+  const [selectedBuilding, setSelectedBuilding] = useState("");
 
-  // Register School
-  const [schoolName, setSchoolName] = useState("");
-  const [district, setDistrict] = useState("");
-  const [studentCode, setStudentCode] = useState("");
-  const [adminCode, setAdminCode] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [chatInput, setChatInput] = useState("");
+
+  const [helpSent, setHelpSent] = useState(false);
 
   /* ---------------- LOGIC ---------------- */
 
   function registerSchool() {
-    if (!schoolName || !studentCode || !adminCode)
-      return window.alert("Fill all fields");
+    if (!schoolName || !joinCode || !adminCode) return;
 
-    const newSchool: SchoolData = {
-      id: Date.now().toString(),
+    setSchool({
       name: schoolName,
-      district,
-      joinCode: studentCode,
+      joinCode,
       adminCode,
-      buildings: ["Main"]
-    };
-
-    setSchools(prev => [...prev, newSchool]);
-    setSelectedSchool(newSchool);
-    setView("role");
+      buildings: buildingsText.split(",").map(b => b.trim())
+    });
   }
 
-  function selectSchool(s: SchoolData) {
-    setSelectedSchool(s);
-    setView("join");
-  }
-
-  function verifyStudent() {
-    if (joinInput === selectedSchool?.joinCode) {
-      setRole("student");
-      setView("dashboard");
+  function joinSchool() {
+    if (!school) return;
+    if (joinInput === school.joinCode) {
+      setIsJoined(true);
     } else {
-      window.alert("Wrong student code");
+      window.alert("Wrong join code");
     }
   }
 
-  function verifyAdmin() {
-    if (adminInput === selectedSchool?.adminCode) {
-      setRole("admin");
-      setView("dashboard");
+  function adminLogin() {
+    if (!school) return;
+    if (adminInput === school.adminCode) {
+      setIsAdmin(true);
     } else {
       window.alert("Wrong admin code");
     }
   }
 
-  function sendAlert() {
-    const active = !alertActive;
-    setAlertActive(active);
-
-    if (active) {
-      const time = new Date().toLocaleTimeString();
-      setHistory(prev => [
-        { time, building, room },
-        ...prev
-      ]);
-    }
+  function sendMessage() {
+    if (!chatInput) return;
+    setMessages([...messages, { sender: "user", text: chatInput }]);
+    setChatInput("");
   }
 
-  function logout() {
-    setView("search");
-    setRole(null);
-    setAlertActive(false);
+  function sendHelp() {
+    setHelpSent(true);
+    window.alert("Help request sent!");
   }
 
-  /* ---------------- GLASS STYLE ---------------- */
-  const glass = "bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-xl";
+  /* ---------------- UI ---------------- */
 
-  /* ---------------- SEARCH ---------------- */
-  if (view === "search") {
+  const glass =
+    "bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-xl";
+
+  /* -------- REGISTER SCHOOL -------- */
+
+  if (!school) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-black flex items-center justify-center text-white p-6">
-        <div className={`${glass} w-full max-w-md p-8`}>
-          <School className="mx-auto mb-4 text-indigo-400" size={48} />
-          <h1 className="text-3xl font-bold text-center mb-6">SafeSpace</h1>
-
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-3" size={18} />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search school"
-              className="w-full pl-10 p-3 bg-black/40 rounded-xl"
-            />
-          </div>
-
-          {schools.length === 0 && (
-            <p className="text-center text-sm opacity-70 mb-4">
-              No schools registered yet
-            </p>
-          )}
-
-          {schools
-            .filter(s => s.name.toLowerCase().includes(search.toLowerCase()))
-            .map(s => (
-              <button
-                key={s.id}
-                onClick={() => selectSchool(s)}
-                className="w-full p-4 bg-white/10 rounded-xl mb-2 flex justify-between"
-              >
-                <span>{s.name}</span>
-                <Lock />
-              </button>
-            ))}
-
-          <button
-            onClick={() => setView("register")}
-            className="w-full mt-4 p-4 border border-dashed rounded-xl"
-          >
-            ➕ Register School
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  /* ---------------- REGISTER ---------------- */
-  if (view === "register") {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white p-6">
-        <div className={`${glass} w-full max-w-md p-8`}>
-          <h2 className="text-2xl font-bold mb-4">Register School</h2>
-
-          <input placeholder="School Name" className="input" value={schoolName} onChange={e=>setSchoolName(e.target.value)} />
-          <input placeholder="District" className="input" value={district} onChange={e=>setDistrict(e.target.value)} />
-          <input placeholder="Student Join Code" className="input" value={studentCode} onChange={e=>setStudentCode(e.target.value)} />
-          <input placeholder="Admin Access Code" className="input" value={adminCode} onChange={e=>setAdminCode(e.target.value)} />
-
-          <button onClick={registerSchool} className="w-full mt-4 bg-indigo-600 p-3 rounded-xl">
-            Register
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  /* ---------------- JOIN ---------------- */
-  if (view === "join") {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center text-white p-6">
-        <div className={`${glass} w-full max-w-sm p-8`}>
-          <h2 className="text-xl font-bold mb-4">{selectedSchool?.name}</h2>
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <div className={`${glass} p-8 w-80`}>
+          <h1 className="text-2xl font-bold mb-6 text-center">
+            Register School
+          </h1>
 
           <input
-            placeholder="Student Join Code"
-            value={joinInput}
-            onChange={e=>setJoinInput(e.target.value)}
             className="input"
+            placeholder="School Name"
+            value={schoolName}
+            onChange={e => setSchoolName(e.target.value)}
           />
 
-          <button onClick={verifyStudent} className="w-full bg-indigo-600 p-3 rounded-xl mt-2">
-            Enter as Student
+          <input
+            className="input"
+            placeholder="Student Join Code"
+            value={joinCode}
+            onChange={e => setJoinCode(e.target.value)}
+          />
+
+          <input
+            className="input"
+            placeholder="Admin Access Code"
+            value={adminCode}
+            onChange={e => setAdminCode(e.target.value)}
+          />
+
+          <input
+            className="input"
+            placeholder="Buildings (Main, Gym, Library)"
+            value={buildingsText}
+            onChange={e => setBuildingsText(e.target.value)}
+          />
+
+          <button
+            className="w-full mt-3 py-3 bg-blue-600 rounded-xl font-bold"
+            onClick={registerSchool}
+          >
+            Create School
           </button>
-
-          <div className="mt-4">
-            <input
-              placeholder="Admin Code"
-              value={adminInput}
-              onChange={e=>setAdminInput(e.target.value)}
-              className="input"
-            />
-
-            <button onClick={verifyAdmin} className="w-full bg-red-600 p-3 rounded-xl mt-2 flex justify-center gap-2">
-              <KeyRound /> Admin Access
-            </button>
-          </div>
         </div>
       </div>
     );
   }
 
-  /* ---------------- DASHBOARD ---------------- */
-  return (
-    <div className={`min-h-screen ${alertActive ? "bg-red-950" : "bg-slate-950"} text-white flex flex-col items-center justify-center p-6`}>
+  /* -------- JOIN SCREEN -------- */
 
-      <button onClick={logout} className="absolute top-6 right-6">
-        <LogOut />
-      </button>
+  if (!isJoined && !isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <div className={`${glass} p-8 w-80`}>
+          <h1 className="text-xl font-bold mb-4 text-center">
+            {school.name}
+          </h1>
 
-      <h1 className="text-xl mb-2">{selectedSchool?.name}</h1>
-      <p className="opacity-70 mb-4">Role: {role}</p>
+          <input
+            className="input"
+            placeholder="Enter Join Code"
+            value={joinInput}
+            onChange={e => setJoinInput(e.target.value)}
+          />
 
-      <input placeholder="Building" value={building} onChange={e=>setBuilding(e.target.value)} className="input" />
-      <input placeholder="Room" value={room} onChange={e=>setRoom(e.target.value)} className="input mb-4" />
+          <button
+            className="w-full bg-green-600 py-3 rounded-xl mb-4"
+            onClick={joinSchool}
+          >
+            Join School
+          </button>
 
-      <button
-        onClick={sendAlert}
-        className={`px-10 py-6 rounded-2xl text-xl font-bold ${alertActive ? "bg-red-600" : "bg-indigo-600"}`}
-      >
-        {alertActive ? "Cancel Alert" : "Send Alert"}
-      </button>
+          <input
+            className="input"
+            placeholder="Admin Code"
+            value={adminInput}
+            onChange={e => setAdminInput(e.target.value)}
+          />
 
-      <div className={`${glass} w-full max-w-sm mt-6 p-4`}>
-        <h3 className="font-bold mb-2">History</h3>
-        {history.map((h,i)=>(
-          <div key={i} className="text-sm bg-white/10 p-2 rounded mb-1">
-            {h.time} — {h.building} {h.room}
-          </div>
-        ))}
+          <button
+            className="w-full bg-purple-600 py-3 rounded-xl"
+            onClick={adminLogin}
+          >
+            Admin Login
+          </button>
+        </div>
       </div>
+    );
+  }
 
+  /* -------- DASHBOARD -------- */
+
+  return (
+    <div className="min-h-screen bg-black text-white p-6">
+      <div className={`${glass} p-6 max-w-md mx-auto`}>
+
+        <h1 className="text-xl font-bold mb-4 text-center">
+          {school.name}
+        </h1>
+
+        {/* Building Select */}
+        <select
+          className="input"
+          value={selectedBuilding}
+          onChange={e => setSelectedBuilding(e.target.value)}
+        >
+          <option value="">Select Building</option>
+          {school.buildings.map((b, i) => (
+            <option key={i} value={b}>{b}</option>
+          ))}
+        </select>
+
+        {/* Help Button */}
+        <button
+          onClick={sendHelp}
+          className={`w-full py-4 rounded-xl font-bold mt-4 ${
+            helpSent ? "bg-red-900" : "bg-red-600"
+          }`}
+        >
+          {helpSent ? "HELP SENT" : "SEND HELP"}
+        </button>
+
+        {/* Chat */}
+        <div className="mt-6">
+          <h2 className="font-bold mb-2">Live Chat</h2>
+
+          <div className="h-40 overflow-y-auto bg-black/40 rounded-xl p-3 mb-2">
+            {messages.map((m, i) => (
+              <div key={i} className="mb-1">
+                {m.sender === "user" ? "You: " : "Admin: "}
+                {m.text}
+              </div>
+            ))}
+          </div>
+
+          <input
+            className="input"
+            placeholder="Type message..."
+            value={chatInput}
+            onChange={e => setChatInput(e.target.value)}
+          />
+
+          <button
+            className="w-full bg-blue-600 py-3 rounded-xl"
+            onClick={sendMessage}
+          >
+            Send Message
+          </button>
+        </div>
+
+      </div>
     </div>
   );
 }
-
-/* Tailwind helper */
-// Add this to your index.css
-// .input { @apply w-full p-3 mb-2 bg-black/40 rounded-xl outline-none; }
