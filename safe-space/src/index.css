@@ -1,13 +1,8 @@
-@import "tailwindcss";
-
-
 body {
   @apply bg-slate-950 text-white min-h-screen;
   margin: 0;
 }
 
-@layer components {
-  .glass-panel {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl;
-  }
+.input {
+  @apply w-full p-3 mb-2 bg-black/40 rounded-xl outline-none;
 }
